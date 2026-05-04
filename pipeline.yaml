@@ -1,0 +1,50 @@
+# config/pipeline.yaml
+# ─────────────────────────────────────────────────────────────
+# Enterprise RAG Pipeline Configuration
+# Modify this file to switch providers, tune retrieval, or
+# adjust guardrail sensitivity without changing code.
+# ─────────────────────────────────────────────────────────────
+
+retrieval:
+  embed_model: "sentence-transformers/all-MiniLM-L6-v2"
+  rerank_model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+  store_dir: "vectorstore"
+  default_strategy: "hybrid"          # dense | sparse | hybrid
+  chunk_size: 500
+  chunk_overlap: 50
+  default_top_k: 5
+
+llm:
+  cache: false                         # set true to enable in-memory response cache
+  max_tokens: 1024
+  providers:
+    # Priority order — first available provider wins
+    - name: azure_openai
+      deployment: "gpt-4o"             # your Azure deployment name
+      endpoint: "${AZURE_OPENAI_ENDPOINT}"
+      api_version: "2024-02-01"
+      temperature: 0
+    - name: openai
+      model: "gpt-4o"
+      temperature: 0
+    - name: local
+      model: "microsoft/phi-2"         # emergency fallback, no internet required
+
+guardrails:
+  redact_pii: true
+  detect_injection: true
+  block_on_injection: true
+  hallucination_threshold: 0.40        # NLI entailment min score (0–1)
+  citation_min_overlap: 0.30          # word overlap before triggering NLI check
+
+observability:
+  enabled: true
+  log_dir: "logs"
+  # Production: set emit_target: azure_monitor | datadog | opentelemetry
+
+# ─────────────────────────────────────────────────────────────
+# Environment variables expected (set in .env or CI/CD secrets):
+#   AZURE_OPENAI_ENDPOINT
+#   AZURE_OPENAI_API_KEY
+#   OPENAI_API_KEY (fallback only)
+# ─────────────────────────────────────────────────────────────
